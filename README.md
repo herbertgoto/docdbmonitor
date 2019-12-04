@@ -22,6 +22,5 @@ Lambda uses documentDB credentials and password is encrypted using KMS. The docu
     5. You will need to fill in the parameter for the documentDB credentials. 
     6. You will need to fill in the parameter for the monitoring thresholds. 
     7. You will need to fill in the parameter for the tag that will identify the clusters to monitor. 
-    8. You will need to fill in the parameter for the topic to send the alerts. 
 5. Once CloudFormation finishes, you need to encrypt documentDB password using a KMS key. Add the newly created role of the lambda to the users of the KMS key.
-
+6. Cloudwatch rule is schedule to run every hour and is disabled by design, modify according to your needs and enable it. 

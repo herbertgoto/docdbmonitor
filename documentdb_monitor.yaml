@@ -28,9 +28,9 @@ Parameters:
   VpcSecurityGroupIds:
     Description: The security groups where the Lambda will be deploy
     Type: List<AWS::EC2::SecurityGroup::Id>
-  SNSTopic:
-    Description: The ARN of the topic where the alert will be sent
-    Type: String
+#  SNSTopic:
+#    Description: The ARN of the topic where the alert will be sent
+#    Type: String
   MonitorTag:
     Description: The tag that identifies the clusters to be monitored
     Type: String
@@ -114,6 +114,10 @@ Resources:
       RoleName: !Sub "DocumentDB-Monitor-${AWS::StackName}"
       Path:
         Fn::Sub: /
+  SNSTopic:
+    Type: AWS::SNS::Topic
+    Properties: 
+      TopicName: !Sub "aws-sns-${AWS::StackName}"  
   LambdaFunction:
     Type: AWS::Lambda::Function
     Properties:
@@ -142,6 +146,7 @@ Resources:
       VpcConfig: 
         SecurityGroupIds: !Ref VpcSecurityGroupIds
         SubnetIds: !Ref SubnetIds
+    DependsOn: SNSTopic
   Scheduler:
     Type: AWS::Events::Rule
     Properties: 
