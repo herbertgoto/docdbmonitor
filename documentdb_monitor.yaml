@@ -28,9 +28,9 @@ Parameters:
   VpcSecurityGroupIds:
     Description: The security groups where the Lambda will be deploy
     Type: List<AWS::EC2::SecurityGroup::Id>
-#  SNSTopic:
-#    Description: The ARN of the topic where the alert will be sent
-#    Type: String
+  KMSKey:
+    Description: The ARN of the KMS Key used to decrypt the docdb user password
+    Type: String
   MonitorTag:
     Description: The tag that identifies the clusters to be monitored
     Type: String
@@ -93,6 +93,14 @@ Resources:
                 Action:
                   - sns:Publish
                 Resource: !Ref SNSTopic
+        - PolicyName: KMSDecrypt
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - kms:Decrypt
+                Resource: !Ref KMSKey
         - PolicyName: DocumentDBDescribe
           PolicyDocument:
             Version: '2012-10-17'
