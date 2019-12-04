@@ -132,7 +132,7 @@ Resources:
           sns_topic_arn: !Ref SNSTopic
           username: !Ref MasterUsername
           password: !Ref MasterUserPassword
-      FunctionName: !Sub "aws-lambda-rappi-${AWS::StackName}"
+      FunctionName: !Sub "aws-lambda-${AWS::StackName}"
       Handler: 'lambda_function.lambda_handler'
       MemorySize: 256
       Role:
@@ -142,11 +142,21 @@ Resources:
       VpcConfig: 
         SecurityGroupIds: !Ref VpcSecurityGroupIds
         SubnetIds: !Ref SubnetIds
-#      KmsKeyArn: !Ref KMSEncrytionKeyForVariableEnvs
+  Scheduler:
+    Type: AWS::Events::Rule
+    Properties: 
+      Description: 'Rule that triggers the Lambda function'
+      Name: !Sub "aws-rule-${AWS::StackName}"
+      ScheduleExpression: "rate(1 hour)"
+      State: DISABLED
+      Targets: 
+        - Arn: !GetAtt LambdaFunction.Arn
+          Id: !Sub "id-lambda-${AWS::StackName}"
+    DependsOn: LambdaFunction
 Outputs:
   LambdaFunctionARN:
     Description: The ARN of the lambda function
     Value:
       !GetAtt LambdaFunction.Arn
     Export:
-      Name: 'AMISearchARN'
+      Name: !Sub "aws-export-name-${AWS::StackName}"
