@@ -11,10 +11,9 @@ Since documentDB are private resources that run in one VPC, there should be as m
 Lambda uses documentDB credentials and password is encrypted using KMS. The documentDB user needs to have access to the default test database and to run the serverStatus command.   
 
 # How to install
-1. Clone the docdbmonitor folder to your local machine. You can modify the code within "lambda_function.py" if required. 
-2. Create a zip file containing folder files. Name it "lambda_function.zip"
-3. Upload that zip file to an AWS S3 bucket.
-4. Run the CloudFormation template "documentdb_monitor.yaml".
+1. Create a python virtualenv and move files in app folder to it. Install dependencies and zip it. Name it "lambda_function.zip". Python runtime used is 3.7.4. 
+2. Upload that zip file to an AWS S3 bucket.
+3. Run the CloudFormation template "documentdb_monitor.yaml".
     1. You will need to fill in the parameter for S3 bucket name.
     2. You will need to fill in the parameter for S3 key that you stored the zip as.
     3. You will need to fill in the parameter for the subnets where the lambda will run.
@@ -22,5 +21,5 @@ Lambda uses documentDB credentials and password is encrypted using KMS. The docu
     5. You will need to fill in the parameter for the documentDB credentials. 
     6. You will need to fill in the parameter for the monitoring thresholds. 
     7. You will need to fill in the parameter for the tag that will identify the clusters to monitor. 
-5. Once CloudFormation finishes, you need to encrypt documentDB password using a KMS key. 
-6. Cloudwatch rule is schedule to run every hour and is disabled by design, modify according to your needs and enable it. 
+4. Once CloudFormation finishes, you need to encrypt documentDB password using a KMS key. You can do this in the lambda console using the encryption helper.  
+5. Cloudwatch rule is schedule to run every hour and is disabled by design, modify according to your needs and enable it. 
