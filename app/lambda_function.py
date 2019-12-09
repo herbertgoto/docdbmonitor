@@ -2,6 +2,7 @@ import pymongo
 import os
 import json
 import boto3
+import botocore
 
 from base64 import b64decode
 
@@ -11,7 +12,6 @@ username=os.environ['username']
 ENCRYPTED = os.environ['password']
 password=boto3.client('kms').decrypt(CiphertextBlob=b64decode(ENCRYPTED))['Plaintext']
 document_db_port=os.environ['db_port']
-pem_locator=os.environ['pem_locator']
 cursors_limit=os.environ['cursors_limit']
 warning_threshold=os.environ['warning_threshold']
 critical_threshold=os.environ['critical_threshold']
@@ -21,11 +21,17 @@ sns_topic_arn=os.environ['sns_topic_arn']
 clientDocDB = boto3.client('docdb')
 ##Create lambda boto3 client
 clientLambda = boto3.client('lambda')
-##Create lambda boto3 client
+##Create SNS boto3 client
 clientSns = boto3.client('sns')
+##Create S3 boto3 client
+clientS3 = boto3.resource('s3')
 
+# Main function - compares cursors limits to thresholds and sends alert
 def lambda_handler(event, context):
     try:
+
+        getDocDbCertificate()
+
         responseLambda = clientLambda.get_function(FunctionName=context.function_name)
         vpcId = responseLambda['Configuration']['VpcConfig']['VpcId']
 
@@ -105,8 +111,11 @@ def getCursors(endpoints, instances):
         cursors = {}
 
         for i in endpoints:
-            ##Create a MongoDB client, open a connection to Amazon DocumentDB 
-            db_client = pymongo.MongoClient('mongodb://'+username+':'+str(password,'utf-8')+'@'+i+':'+document_db_port+'/?ssl=true&ssl_ca_certs='+pem_locator)
+            ##Create a MongoDB client, open a connection to Amazon DocumentDB with TLS
+            db_client = pymongo.MongoClient('mongodb://'+username+':'+str(password,'utf-8')+'@'+i+':'+document_db_port+'/?ssl=true&ssl_ca_certs=/tmp/rds-combined-ca-bundle.pem')
+            ##Create a MongoDB client, open a connection to Amazon DocumentDB without TLS
+            #db_client = pymongo.MongoClient('mongodb://'+username+':'+str(password,'utf-8')+'@'+i+':'+document_db_port)
+            #aws docdb describe-db-cluster-parameters --db-cluster-parameter-group-name=default.docdb3.6
             ##Specify the database to be used
             db = db_client.test
             print(db)
@@ -136,3 +145,13 @@ def sendAlert(message):
     except Exception as ex:
         print('Error in send alert')
         print(str(ex))
+
+#Function to download the current docdb certificate
+def getDocDbCertificate():
+    try:
+        clientS3.Bucket('rds-downloads').download_file('rds-combined-ca-bundle.pem', '/tmp/rds-combined-ca-bundle.pem')
+    except botocore.exceptions.ClientError as e:
+        if e.response['Error']['Code'] == "404":
+            print("The object does not exist.")
+        else:
+            raise
