@@ -2,7 +2,7 @@
 
 This template can be used to deploy a lambda to monitor cursors in every instance of all DocumentDB clusters within a VPC. 
 
-The lambda function is scheduled using a CloudWatch rule. Everytime the function is triggered it queries all clusters current cursor usage and compares it to the a warning and a critical threshold, if the usage is above the threshold it raises an alert to an SNS topic. 
+The lambda function is scheduled using a CloudWatch rule. Everytime the function is triggered it queries all clusters current cursor usage and compares it against warning and critical threshold, if the usage is above any of the thresholds it raises an alert to an SNS topic. 
 
 Thresholds are environment variables as well as DocumentDB connection parameters. 
 
@@ -20,6 +20,10 @@ Lambda uses documentDB credentials and password is encrypted using KMS. The docu
     4. You will need to fill in the parameter for the seceurity groups where the lambda will run.
     5. You will need to fill in the parameter for the documentDB credentials. 
     6. You will need to fill in the parameter for the monitoring thresholds. 
-    7. You will need to fill in the parameter for the tag that will identify the clusters to monitor. 
+    7. You will need to fill in the parameter for the tag that will identify the clusters to monitor. Lambda just checks if the value is part of a tag.  
 4. Once CloudFormation finishes, you need to encrypt documentDB password using a KMS key. You can do this in the lambda console using the encryption helper.  
 5. Cloudwatch rule is schedule to run every hour and is disabled by design, modify according to your needs and enable it. 
+
+This deployment supports clusters with TLS enabled and disabled. 
+
+Tag your cluster to be considered in the monitoring. Lambda will check if the value enter as parameter is the same as the value in the tag; if it does not macht the cluster will not be considered. 
