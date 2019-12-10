@@ -76,9 +76,14 @@ def getInstances(tagValue):
             tags = clientDocDB.list_tags_for_resource(ResourceName=i["DBClusterArn"])
             if len(tags["TagList"]) > 0:
                 for j in tags["TagList"]:
-                    if j["Value"] == tagValue:                                                          
+                    if j["Value"] == tagValue:
+                        tls = 1
+                        param_group = clientDocDB.describe_db_cluster_parameters(DBClusterParameterGroupName=i["DBClusterParameterGroup"])
+                        for t in param_group['Parameters']:
+                            if t["ParameterName"] == "tls" and t["ParameterValue"] == "disabled":
+                                tls = 0                                                
                         for k in i["DBClusterMembers"]:
-                            instances.append(k["DBInstanceIdentifier"])
+                            instances.append({'instance': k["DBInstanceIdentifier"], 'tls':tls})
         
         return instances
 
@@ -93,9 +98,9 @@ def getEndpoints(instances,vpcId):
         endpoints = []
 
         for i in instances:
-            response = clientDocDB.describe_db_instances(DBInstanceIdentifier=i)
+            response = clientDocDB.describe_db_instances(DBInstanceIdentifier=i['instance'])
             if response["DBInstances"][0]['DBSubnetGroup']['VpcId'] == vpcId:
-                endpoints.append(response["DBInstances"][0]["Endpoint"]["Address"])
+                endpoints.append({'endpoint': response["DBInstances"][0]["Endpoint"]["Address"], 'tls':i['tls']})
         
         return endpoints 
 
@@ -111,18 +116,20 @@ def getCursors(endpoints, instances):
         cursors = {}
 
         for i in endpoints:
-            ##Create a MongoDB client, open a connection to Amazon DocumentDB with TLS
-            db_client = pymongo.MongoClient('mongodb://'+username+':'+str(password,'utf-8')+'@'+i+':'+document_db_port+'/?ssl=true&ssl_ca_certs=/tmp/rds-combined-ca-bundle.pem')
-            ##Create a MongoDB client, open a connection to Amazon DocumentDB without TLS
-            #db_client = pymongo.MongoClient('mongodb://'+username+':'+str(password,'utf-8')+'@'+i+':'+document_db_port)
-            #aws docdb describe-db-cluster-parameters --db-cluster-parameter-group-name=default.docdb3.6
+            if i['tls'] == 1:
+                ##Create a MongoDB client, open a connection to Amazon DocumentDB with TLS
+                db_client = pymongo.MongoClient('mongodb://'+username+':'+str(password,'utf-8')+'@'+i['endpoint']+':'+document_db_port+'/?ssl=true&ssl_ca_certs=/tmp/rds-combined-ca-bundle.pem')
+            else:
+                ##Create a MongoDB client, open a connection to Amazon DocumentDB without TLS
+                db_client = pymongo.MongoClient('mongodb://'+username+':'+str(password,'utf-8')+'@'+i['endpoint']+':'+document_db_port)
             ##Specify the database to be used
             db = db_client.test
-            print(db)
             ## Runs serverStatus Command to get cursors
             x = db.command("serverStatus")
-            cursors.update({instances[n]:x["metrics"]["cursor"]})
+            cursors.update({instances[n]['instance']:x["metrics"]["cursor"]})
             n += 1
+
+        print(cursors)
 
         return cursors
 

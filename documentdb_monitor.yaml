@@ -110,6 +110,7 @@ Resources:
                   - rds:ListTagsForResource
                   - rds:DescribeDBInstances
                   - rds:DescribeDBClusters
+                  - rds:DescribeDBClusterParameters
                 Resource: '*'
         - PolicyName: LambdaDescribe
           PolicyDocument:
