@@ -50,7 +50,7 @@ def lambda_handler(event, context):
                     if usedCursorsPercentage >= float(critical_threshold):
                         sendAlert(json.dumps({"Alert": "Critical", "docdbInstance": i, "usedPercentage": (usedCursors*100) , "usedCursors" : usedCursors, "totalCursors": cursors_limit}))
                     elif usedCursorsPercentage >= float(warning_threshold):
-                        sendAlert(json.dumps({"Alert": "Critical", "docdbInstance": i, "usedPercentage": (usedCursors*100) , "usedCursors" : usedCursors, "totalCursors": cursors_limit}))
+                        sendAlert(json.dumps({"Alert": "Warning", "docdbInstance": i, "usedPercentage": (usedCursors*100) , "usedCursors" : usedCursors, "totalCursors": cursors_limit}))
             
             else:
                 resp = 'No clusters to monitor!'
@@ -73,18 +73,18 @@ def getInstances(tagValue):
         instances = []
 
         for i in response["DBClusters"]:
-            tags = clientDocDB.list_tags_for_resource(ResourceName=i["DBClusterArn"])
-            if len(tags["TagList"]) > 0:
-                for j in tags["TagList"]:
-                    if j["Value"] == tagValue:
-                        tls = 1
-                        param_group = clientDocDB.describe_db_cluster_parameters(DBClusterParameterGroupName=i["DBClusterParameterGroup"])
-                        for t in param_group['Parameters']:
-                            if t["ParameterName"] == "tls" and t["ParameterValue"] == "disabled":
-                                tls = 0                                                
-                        for k in i["DBClusterMembers"]:
-                            instances.append({'instance': k["DBInstanceIdentifier"], 'tls':tls})
-        
+            if i['Engine'] == 'docdb':
+                tags = clientDocDB.list_tags_for_resource(ResourceName=i["DBClusterArn"])
+                if len(tags["TagList"]) > 0:
+                    for j in tags["TagList"]:
+                        if j["Value"] == tagValue:
+                            tls = 1
+                            param_group = clientDocDB.describe_db_cluster_parameters(DBClusterParameterGroupName=i["DBClusterParameterGroup"])
+                            for t in param_group['Parameters']:
+                                if t["ParameterName"] == "tls" and t["ParameterValue"] == "disabled":
+                                    tls = 0                                                
+                            for k in i["DBClusterMembers"]:
+                                instances.append({'instance': k["DBInstanceIdentifier"], 'tls':tls})
         return instances
 
     except Exception as ex:
@@ -94,14 +94,12 @@ def getInstances(tagValue):
 #Function to get endpoints to monitor
 def getEndpoints(instances,vpcId):
     try:
-        
         endpoints = []
 
         for i in instances:
             response = clientDocDB.describe_db_instances(DBInstanceIdentifier=i['instance'])
             if response["DBInstances"][0]['DBSubnetGroup']['VpcId'] == vpcId:
                 endpoints.append({'endpoint': response["DBInstances"][0]["Endpoint"]["Address"], 'tls':i['tls']})
-        
         return endpoints 
 
     except Exception as ex:
@@ -111,7 +109,6 @@ def getEndpoints(instances,vpcId):
 #Function to get cursors for each endpoint
 def getCursors(endpoints, instances):
     try:
-        
         n = 0
         cursors = {}
 
@@ -128,9 +125,6 @@ def getCursors(endpoints, instances):
             x = db.command("serverStatus")
             cursors.update({instances[n]['instance']:x["metrics"]["cursor"]})
             n += 1
-
-        print(cursors)
-
         return cursors
 
     except Exception as ex:

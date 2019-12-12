@@ -35,9 +35,6 @@ Parameters:
     Description: The tag that identifies the clusters to be monitored
     Type: String
     Default: 'production'
-#  KMSEncrytionKeyForVariableEnvs:
-#    Description: The ARN of the key that will be used to decrypt password
-#    Type: String
 Resources:
   LambdaRole:
     Type: AWS::IAM::Role
@@ -101,6 +98,14 @@ Resources:
                 Action:
                   - kms:Decrypt
                 Resource: !Ref KMSKey
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: 'arn:aws:s3:::rds-downloads/rds-combined-ca-bundle.pem'
         - PolicyName: DocumentDBDescribe
           PolicyDocument:
             Version: '2012-10-17'
@@ -141,7 +146,6 @@ Resources:
           cursors_limit: '450'
           db_port: '27017'
           monitor_tag: !Ref MonitorTag
-          pem_locator: 'rds-combined-ca-bundle.pem'
           sns_topic_arn: !Ref SNSTopic
           username: !Ref MasterUsername
           password: !Ref MasterUserPassword
